@@ -1,0 +1,6 @@
+{
+  "name": "Smart Admission and Quiz Platform",
+  "description": "A gamified college stream discoverer, timed quiz, referral system, and college matching portal for grade 12 (+2) students.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
