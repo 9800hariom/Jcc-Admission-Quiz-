@@ -138,7 +138,18 @@ export default function RegistrationForm({ onRegisterSuccess, onNavigateToAdmin 
         })
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        if (!response.ok) {
+          throw new Error(`Server error (${response.status}): Could not register profile.`);
+        } else {
+          throw new Error("Invalid response format received from server.");
+        }
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Failed to register student");
       }

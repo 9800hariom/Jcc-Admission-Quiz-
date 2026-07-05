@@ -69,7 +69,17 @@ welcomeToJCC();`);
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId: student.id })
       });
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        if (!response.ok) {
+          throw new Error(`Server error (${response.status}): Could not load AI guidance.`);
+        } else {
+          throw new Error("Invalid response format received from server.");
+        }
+      }
       if (!response.ok) {
         throw new Error(data.error || "Failed to generate AI guidance");
       }

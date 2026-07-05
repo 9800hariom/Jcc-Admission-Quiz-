@@ -743,6 +743,12 @@ Keep the tone exceptionally academic, warm, and highly professional.
   }
 });
 
+// Global Error Handler for API Routes (forces JSON responses instead of Express HTML pages)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Uncaught API Error:", err);
+  res.status(500).json({ error: err.message || "An unexpected error occurred on the server." });
+});
+
 // ---------------------- FRONTEND ROUTING & VITE MIDDLEWARE ----------------------
 
 async function startServer() {

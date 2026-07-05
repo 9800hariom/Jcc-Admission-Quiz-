@@ -49,7 +49,7 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
   const [qOptC, setQOptC] = useState("");
   const [qOptD, setQOptD] = useState("");
   const [qAnswer, setQAnswer] = useState("");
-  const [qCategory, setQCategory] = useState<"IT_MATH" | "BUSINESS" | "LAW" | "AGRI_SCIENCE">("IT_MATH");
+  const [qCategory, setQCategory] = useState<"GENERAL_KNOWLEDGE" | "COMPUTER_SCIENCE" | "SCIENCE_MATH">("GENERAL_KNOWLEDGE");
   const [qExplanation, setQExplanation] = useState("");
 
   const [operationMsg, setOperationMsg] = useState("");
@@ -63,7 +63,17 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
+      const resText = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(resText);
+      } catch (parseErr) {
+        if (!res.ok) {
+          throw new Error(`Server error (${res.status}): Could not connect to admin portal.`);
+        } else {
+          throw new Error("Invalid response format received from server.");
+        }
+      }
       if (!res.ok) {
         throw new Error(data.error || "Login failed");
       }
@@ -211,7 +221,7 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
     setQOptC("");
     setQOptD("");
     setQAnswer("");
-    setQCategory("IT_MATH");
+    setQCategory("GENERAL_KNOWLEDGE");
     setQExplanation("");
     setQuestionModalOpen(true);
   };
@@ -931,10 +941,9 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
                         onChange={(e) => setQCategory(e.target.value as any)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
                       >
-                        <option value="IT_MATH">IT & Math logic</option>
-                        <option value="BUSINESS">Business & calculations</option>
-                        <option value="LAW">Law & Logical structures</option>
-                        <option value="AGRI_SCIENCE">Agriculture & Science</option>
+                        <option value="GENERAL_KNOWLEDGE">General Knowledge</option>
+                        <option value="COMPUTER_SCIENCE">Computer Science</option>
+                        <option value="SCIENCE_MATH">Science & Mathematics</option>
                       </select>
                     </div>
                   </div>

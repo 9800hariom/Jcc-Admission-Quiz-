@@ -129,7 +129,18 @@ export default function QuizEngine({ student, onQuizComplete }: QuizEngineProps)
         })
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        if (!response.ok) {
+          throw new Error(`Server error (${response.status}): Could not submit quiz results.`);
+        } else {
+          throw new Error("Invalid response format received from server.");
+        }
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Failed to submit quiz results");
       }
