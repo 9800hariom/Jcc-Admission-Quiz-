@@ -26,21 +26,120 @@ export default function QuizEngine({ student, onQuizComplete }: QuizEngineProps)
       text: "Which is the highest peak in the world, located in Nepal?",
       options: ["K2", "Mount Everest", "Kangchenjunga", "Lhotse"],
       answer: "Mount Everest",
-      category: "GENERAL_KNOWLEDGE"
+      category: "GENERAL_KNOWLEDGE",
+      explanation: "Mount Everest is the world's highest peak at 8,848.86 meters above sea level, located in Nepal."
     },
     {
       id: 2,
-      text: "What does CPU stand for in computer systems?",
-      options: ["Central Processing Unit", "Computer Personal Unit", "Central Processor Utility", "Control Power Unit"],
-      answer: "Central Processing Unit",
-      category: "COMPUTER_SCIENCE"
+      text: "Which historical city is known as the birthplace of Goddess Sita and famous for the Janaki Temple?",
+      options: ["Janakpurdham", "Kathmandu", "Pokhara", "Lumbini"],
+      answer: "Janakpurdham",
+      category: "GENERAL_KNOWLEDGE",
+      explanation: "Janakpurdham is a sacred historical city in Madhesh Province, Nepal, famous for the Janaki Mandir."
     },
     {
       id: 3,
+      text: "What is the official currency of Nepal?",
+      options: ["Nepalese Rupee", "Indian Rupee", "Taka", "Kyat"],
+      answer: "Nepalese Rupee",
+      category: "GENERAL_KNOWLEDGE",
+      explanation: "The official currency of Nepal is the Nepalese Rupee (NPR)."
+    },
+    {
+      id: 4,
+      text: "Who is the writer of the national anthem of Nepal, 'Sayaun Thunga Phool Ka'?",
+      options: ["Pradip Kumar Rai (Byakul Maila)", "Laxmi Prasad Devkota", "Bhanubhakta Acharya", "Madhav Prasad Ghimire"],
+      answer: "Pradip Kumar Rai (Byakul Maila)",
+      category: "GENERAL_KNOWLEDGE",
+      explanation: "The national anthem of Nepal was written by Pradip Kumar Rai, popularly known as Byakul Maila."
+    },
+    {
+      id: 5,
+      text: "Which country is traditionally known as the land of the rising sun?",
+      options: ["China", "Japan", "South Korea", "Norway"],
+      answer: "Japan",
+      category: "GENERAL_KNOWLEDGE",
+      explanation: "Japan is traditionally known as the Land of the Rising Sun."
+    },
+    {
+      id: 6,
+      text: "What does CPU stand for in computer systems?",
+      options: ["Central Processing Unit", "Computer Personal Unit", "Central Processor Utility", "Control Power Unit"],
+      answer: "Central Processing Unit",
+      category: "COMPUTER_SCIENCE",
+      explanation: "CPU stands for Central Processing Unit, often called the brain of the computer."
+    },
+    {
+      id: 7,
+      text: "Which of the following is an open-source operating system?",
+      options: ["Windows 11", "macOS", "Linux", "iOS"],
+      answer: "Linux",
+      category: "COMPUTER_SCIENCE",
+      explanation: "Linux is a famous open-source Unix-like operating system kernel."
+    },
+    {
+      id: 8,
+      text: "What is the main purpose of an IP address?",
+      options: ["To identify a device on a network", "To increase internet speed", "To store webpage images", "To encrypt emails"],
+      answer: "To identify a device on a network",
+      category: "COMPUTER_SCIENCE",
+      explanation: "An Internet Protocol (IP) address is a unique numerical label assigned to each device connected to a computer network."
+    },
+    {
+      id: 9,
+      text: "Which programming language is primarily used for web browser scripting and dynamic frontend interactivity?",
+      options: ["Python", "C++", "JavaScript", "SQL"],
+      answer: "JavaScript",
+      category: "COMPUTER_SCIENCE",
+      explanation: "JavaScript is the standard language used to make web pages interactive and dynamic on the client side."
+    },
+    {
+      id: 10,
+      text: "Which of the following is NOT a storage device?",
+      options: ["Solid State Drive (SSD)", "RAM", "Hard Disk Drive (HDD)", "Microprocessor"],
+      answer: "Microprocessor",
+      category: "COMPUTER_SCIENCE",
+      explanation: "A microprocessor is a processing unit (CPU), not a storage device, while SSD, RAM, and HDD are storage units."
+    },
+    {
+      id: 11,
+      text: "What is the value of the mathematical constant Pi (π) rounded to two decimal places?",
+      options: ["3.14", "3.41", "3.12", "3.16"],
+      answer: "3.14",
+      category: "SCIENCE_MATH",
+      explanation: "Pi is approximately equal to 3.14159, which rounds to 3.14."
+    },
+    {
+      id: 12,
+      text: "Which gas do green plants absorb from the atmosphere during the process of photosynthesis?",
+      options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"],
+      answer: "Carbon Dioxide",
+      category: "SCIENCE_MATH",
+      explanation: "Plants absorb Carbon Dioxide (CO2) and release Oxygen during photosynthesis."
+    },
+    {
+      id: 13,
+      text: "If a right-angled triangle has sides of length 3 cm and 4 cm, what is the length of the hypotenuse?",
+      options: ["5 cm", "6 cm", "7 cm", "8 cm"],
+      answer: "5 cm",
+      category: "SCIENCE_MATH",
+      explanation: "According to the Pythagorean theorem, 3² + 4² = 9 + 16 = 25, so hypotenuse = √25 = 5 cm."
+    },
+    {
+      id: 14,
       text: "What is the chemical formula for pure water?",
       options: ["CO2", "H2O", "NaCl", "O2"],
       answer: "H2O",
-      category: "SCIENCE_MATH"
+      category: "SCIENCE_MATH",
+      explanation: "Water consists of two hydrogen atoms bonded to one oxygen atom, hence H2O."
+    },
+    {
+      id: 15,
+      text: "Solve for x: if 3x - 7 = 14, then what is the value of x?",
+      options: ["5", "6", "7", "8"],
+      answer: "7",
+      category: "SCIENCE_MATH",
+      explanation: "3x - 7 = 14 => 3x = 21 => x = 7."
     }
   ];
 
