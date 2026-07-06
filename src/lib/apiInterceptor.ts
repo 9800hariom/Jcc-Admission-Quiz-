@@ -3,7 +3,7 @@ import { handleMockRequest } from "./mockServer";
 const originalFetch = window.fetch;
 
 export function initApiInterceptor() {
-  window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const newFetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const urlStr = typeof input === "string" 
       ? input 
       : (input instanceof URL ? input.href : input.url);
@@ -36,4 +36,20 @@ export function initApiInterceptor() {
     // For all other resources (static assets, external APIs, etc.), use original fetch
     return originalFetch(input, init);
   };
+
+  try {
+    Object.defineProperty(window, "fetch", {
+      value: newFetch,
+      configurable: true,
+      writable: true,
+      enumerable: true
+    });
+  } catch (err) {
+    console.warn("[API Interceptor] Failed to define fetch property on window. Trying direct assignment as fallback.", err);
+    try {
+      (window as any).fetch = newFetch;
+    } catch (fallbackErr) {
+      console.error("[API Interceptor] Critical: Failed to override window.fetch entirely.", fallbackErr);
+    }
+  }
 }

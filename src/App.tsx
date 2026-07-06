@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Student, College } from "./types";
 import RegistrationForm from "./components/RegistrationForm";
+import RewardWheel from "./components/RewardWheel";
 import QuizEngine from "./components/QuizEngine";
 import ResultPortal from "./components/ResultPortal";
 import AdminDashboard from "./components/AdminDashboard";
@@ -18,7 +19,7 @@ import AiAdvisor from "./components/AiAdvisor";
 import JccLogo from "./components/JccLogo";
 
 type NavigationState = "HOME" | "ABOUT" | "PROGRAMS" | "ADMISSIONS" | "PORTALS" | "QUIZ_PORTAL" | "AI_ADVISOR" | "ADMIN";
-type QuizStep = "REGISTER" | "ACTIVE_QUIZ" | "RESULTS";
+type QuizStep = "REGISTER" | "LUCKY_WHEEL" | "ACTIVE_QUIZ" | "RESULTS";
 
 export default function App() {
   const [viewState, setViewState] = useState<NavigationState>("QUIZ_PORTAL");
@@ -38,8 +39,9 @@ export default function App() {
 
   const handleRegisterSuccess = (student: Student) => {
     setCurrentStudent(student);
-    setQuizStep("ACTIVE_QUIZ");
+    setQuizStep("LUCKY_WHEEL");
   };
+
 
   const handleQuizComplete = (result: any) => {
     setQuizResult(result);
@@ -225,6 +227,16 @@ export default function App() {
                 <RegistrationForm
                   onRegisterSuccess={handleRegisterSuccess}
                   onNavigateToAdmin={() => setViewState("ADMIN")}
+                />
+              )}
+
+              {quizStep === "LUCKY_WHEEL" && currentStudent && (
+                <RewardWheel
+                  student={currentStudent}
+                  onProceedToQuiz={(updatedStudent) => {
+                    setCurrentStudent(updatedStudent);
+                    setQuizStep("ACTIVE_QUIZ");
+                  }}
                 />
               )}
 

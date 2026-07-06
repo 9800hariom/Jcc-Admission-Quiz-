@@ -17,7 +17,7 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
   const [authToken, setAuthToken] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"STATS" | "STUDENTS" | "COLLEGES" | "QUESTIONS" | "REFERRALS">("STATS");
+  const [activeTab, setActiveTab] = useState<"STATS" | "STUDENTS" | "COLLEGES" | "QUESTIONS" | "REFERRALS" | "REWARDS">("STATS");
 
   // Admin Data states
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -25,10 +25,21 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
   const [colleges, setColleges] = useState<College[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [referrals, setReferrals] = useState<ReferralHistory[]>([]);
+  const [rewards, setRewards] = useState<any[]>([]);
+  const [spins, setSpins] = useState<any[]>([]);
 
   // Search filter states
   const [studentSearch, setStudentSearch] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  // CRUD Modal states for Reward Slices
+  const [rewardModalOpen, setRewardModalOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<any | null>(null);
+  const [rewName, setRewName] = useState("");
+  const [rewColor, setRewColor] = useState("");
+  const [rewProbability, setRewProbability] = useState("1.0");
+  const [rewIsPremium, setRewIsPremium] = useState(false);
+  const [rewQuantityLimit, setRewQuantityLimit] = useState("10");
 
   // CRUD Modal states for College
   const [collegeModalOpen, setCollegeModalOpen] = useState(false);
@@ -118,6 +129,14 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
         // Fetch Referrals
         const refRes = await fetch("/api/admin/referrals", { headers });
         if (refRes.ok) setReferrals(await refRes.json());
+
+        // Fetch Rewards
+        const rewRes = await fetch("/api/rewards");
+        if (rewRes.ok) setRewards(await rewRes.json());
+
+        // Fetch Spins
+        const spinsRes = await fetch("/api/admin/spins", { headers });
+        if (spinsRes.ok) setSpins(await spinsRes.json());
       } catch (e) {
         console.error("Failed to load admin management logs", e);
       }
@@ -287,6 +306,125 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
     }
   };
 
+  // SMART REWARD WHEEL CRUD OPERATIONS
+  const openAddReward = () => {
+    setEditingReward(null);
+    setRewName("");
+    setRewColor("#3b82f6");
+    setRewProbability("5.0");
+    setRewIsPremium(false);
+    setRewQuantityLimit("100");
+    setRewardModalOpen(true);
+  };
+
+  const openEditReward = (rew: any) => {
+    setEditingReward(rew);
+    setRewName(rew.name);
+    setRewColor(rew.color);
+    setRewProbability(String(rew.probability));
+    setRewIsPremium(!!rew.isPremium);
+    setRewQuantityLimit(String(rew.quantityLimit || "100"));
+    setRewardModalOpen(true);
+  };
+
+  const saveReward = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rewName || !rewColor || !rewProbability) return;
+
+    const payload = {
+      id: editingReward ? editingReward.id : undefined,
+      name: rewName,
+      color: rewColor,
+      probability: Number(rewProbability),
+      isPremium: rewIsPremium,
+      quantityLimit: Number(rewQuantityLimit) >= 0 ? Number(rewQuantityLimit) : 100
+    };
+
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`
+    };
+
+    try {
+      const res = await fetch("/api/rewards", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setOperationMsg(`Reward saved at ${Date.now()}`);
+        setRewardModalOpen(false);
+      } else {
+        alert("Failed to save reward.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteReward = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this reward slice from the wheel?")) return;
+    try {
+      const res = await fetch("/api/rewards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ deleteId: id })
+      });
+      if (res.ok) {
+        setOperationMsg(`Reward deleted at ${Date.now()}`);
+      } else {
+        alert("Failed to delete reward.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const approveRewardSpin = async (spinId: string, status: "APPROVED" | "REJECTED") => {
+    if (!window.confirm(`Are you sure you want to mark this claim as ${status}?`)) return;
+    try {
+      const res = await fetch("/api/admin/approve-reward", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ spinId, status })
+      });
+      if (res.ok) {
+        setOperationMsg(`Spin claim updated to ${status} at ${Date.now()}`);
+      } else {
+        alert("Failed to update spin status.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const approveScholarship = async (studentId: string, status: "APPROVED" | "REJECTED" | "NONE") => {
+    if (!window.confirm(`Are you sure you want to mark this student's scholarship status as ${status}?`)) return;
+    try {
+      const res = await fetch("/api/admin/approve-scholarship", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ studentId, status })
+      });
+      if (res.ok) {
+        setOperationMsg(`Scholarship status updated to ${status} at ${Date.now()}`);
+      } else {
+        alert("Failed to update scholarship status.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // ---------------------- LOGIN SCREEN ----------------------
   if (!isAuthenticated) {
     return (
@@ -410,6 +548,7 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
         {[
           { id: "STATS", label: "Overview Stats", icon: LayoutDashboard },
           { id: "STUDENTS", label: "Student Registers", icon: Users },
+          { id: "REWARDS", label: "Reward Wheel Panel", icon: Sparkles },
           { id: "COLLEGES", label: "Colleges CRUD", icon: GraduationCap },
           { id: "QUESTIONS", label: "Quiz Questions", icon: HelpCircle },
           { id: "REFERRALS", label: "Referral Loops", icon: Gift }
@@ -449,14 +588,12 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
               <span className="text-3xl font-extrabold text-slate-800 mt-1 block">{stats.quizCompletedCount}</span>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wide">Stream Selected (Most Selected)</span>
-              <span className="text-lg font-extrabold text-slate-800 mt-2 block truncate">
-                {Object.entries(stats.streamCounts).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || "None"}
-              </span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wide">Total Wheel Spins</span>
+              <span className="text-3xl font-extrabold text-purple-600 mt-1 block">{(stats as any).totalSpins || 0}</span>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wide">Referral Connections</span>
-              <span className="text-3xl font-extrabold text-indigo-600 mt-1 block">{stats.totalReferralsCount}</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wide">Pending Premium Claims</span>
+              <span className="text-3xl font-extrabold text-rose-600 mt-1 block">{(stats as any).pendingApprovalsCount || 0}</span>
             </div>
           </div>
 
@@ -969,6 +1106,396 @@ export default function AdminDashboard({ onBackToPortal }: AdminDashboardProps) 
                     </button>
                     <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg cursor-pointer">
                       Save Question Node
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB CONTENT: SMART REWARD WHEEL & SCHOLARSHIP BOARD */}
+      {activeTab === "REWARDS" && (
+        <div className="space-y-8">
+          {/* Slices Configurations */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-extrabold uppercase text-slate-700 tracking-wider">Wheel Slices Configuration (Roulette Probability Engine)</h3>
+                <p className="text-xs text-slate-400 mt-1">Configure slices, color segments, and weighted probability percentages for student spins.</p>
+              </div>
+              <button
+                onClick={openAddReward}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center space-x-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Wheel Sector</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-600 font-bold">
+                    <th className="p-3">Sector Label / Reward</th>
+                    <th className="p-3">Color Segment</th>
+                    <th className="p-3">Weighted Probability</th>
+                    <th className="p-3">Is Premium?</th>
+                    <th className="p-3 text-center">Remaining Quantity Limits</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {rewards.map((rew) => {
+                    const won = rew.quantityWon || 0;
+                    const limit = rew.quantityLimit !== undefined ? rew.quantityLimit : 100;
+                    const isExceeded = won >= limit;
+                    return (
+                      <tr key={rew.id} className="hover:bg-slate-50/50">
+                        <td className="p-3 font-bold text-slate-800 flex items-center space-x-2">
+                          <span
+                            className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-sm inline-block shrink-0"
+                            style={{ backgroundColor: rew.color }}
+                          />
+                          <span>{rew.name}</span>
+                        </td>
+                        <td className="p-3 font-mono text-slate-500">{rew.color}</td>
+                        <td className="p-3">
+                          <span className="font-extrabold text-indigo-600">{rew.probability}</span>
+                          <span className="text-[10px] text-slate-400 ml-1">weight score</span>
+                        </td>
+                        <td className="p-3">
+                          {rew.isPremium ? (
+                            <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded text-[10px] font-bold">
+                              PREMIUM PRIZE
+                            </span>
+                          ) : (
+                            <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded text-[10px]">
+                              Standard
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className={`font-bold ${isExceeded ? "text-rose-600" : "text-emerald-700"}`}>
+                            {won}
+                          </span>
+                          <span className="text-slate-400"> / {limit}</span>
+                          {isExceeded && (
+                            <span className="text-[9px] text-rose-500 font-bold ml-1.5 uppercase tracking-wide">
+                              (MAX OUT)
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right space-x-2">
+                          <button
+                            onClick={() => openEditReward(rew)}
+                            className="text-indigo-600 hover:text-indigo-800 font-bold hover:underline cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteReward(rew.id)}
+                            className="text-rose-600 hover:text-rose-800 font-bold hover:underline cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {rewards.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">No active wheel reward segments found. Add one to begin.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Verification & Spins logs */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <h3 className="text-sm font-extrabold uppercase text-slate-700 tracking-wider">Student Wheel Spin Logs & Verification Board</h3>
+              <p className="text-xs text-slate-400 mt-1">Audit, monitor, and approve student prize claims (premium items require college authorization).</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-600 font-bold">
+                    <th className="p-3">Student Candidate</th>
+                    <th className="p-3">Student Contact Details</th>
+                    <th className="p-3">Prize Spun</th>
+                    <th className="p-3">Wheel Spin Timestamp</th>
+                    <th className="p-3 text-center">Claim Status</th>
+                    <th className="p-3 text-right">Approval Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {spins.map((spin) => (
+                    <tr key={spin.id} className="hover:bg-slate-50/50">
+                      <td className="p-3 font-bold text-slate-800">{spin.studentName}</td>
+                      <td className="p-3 font-mono text-[11px] text-slate-500 space-y-0.5">
+                        <div className="truncate max-w-[180px]">{spin.studentEmail}</div>
+                        <div>{spin.studentPhone}</div>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-extrabold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                          {spin.rewardName}
+                        </span>
+                      </td>
+                      <td className="p-3 text-slate-400">{new Date(spin.timestamp).toLocaleString()}</td>
+                      <td className="p-3 text-center">
+                        {spin.approvedStatus === "APPROVED" && (
+                          <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded text-[10px] font-extrabold">
+                            APPROVED CLAIM
+                          </span>
+                        )}
+                        {spin.approvedStatus === "REJECTED" && (
+                          <span className="bg-rose-100 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded text-[10px] font-extrabold">
+                            REJECTED CLAIM
+                          </span>
+                        )}
+                        {spin.approvedStatus === "PENDING" && (
+                          <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded text-[10px] font-extrabold animate-pulse">
+                            PENDING COLLEGE APPROVAL
+                          </span>
+                        )}
+                        {spin.approvedStatus === "NONE" && (
+                          <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded text-[10px]">
+                            Auto-Granted (Standard)
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right">
+                        {spin.approvedStatus === "PENDING" ? (
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              onClick={() => approveRewardSpin(spin.id, "APPROVED")}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-all"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => approveRewardSpin(spin.id, "REJECTED")}
+                              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-all"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-normal">Closed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {spins.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">No spin history records found yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Merit Scholarship Board */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <h3 className="text-sm font-extrabold uppercase text-slate-700 tracking-wider">Merit Scholarship Evaluation Panel</h3>
+              <p className="text-xs text-slate-400 mt-1">Review student candidates who completed the aptitude evaluation. Determine final scholarship statuses based on quiz merit.</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-600 font-bold">
+                    <th className="p-3">Student Applicant</th>
+                    <th className="p-3">Stream Rec.</th>
+                    <th className="p-3 text-center">Correct Answers</th>
+                    <th className="p-3 text-center">Final Score</th>
+                    <th className="p-3 text-center">Scholarship Status</th>
+                    <th className="p-3 text-right">Merit Evaluation actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {students.filter((s) => s.quizScore !== null).map((student) => {
+                    const status = student.scholarshipApprovedStatus || "NONE";
+                    return (
+                      <tr key={student.id} className="hover:bg-slate-50/50">
+                        <td className="p-3">
+                          <div className="font-bold text-slate-800">{student.fullName}</div>
+                          <div className="text-[10px] text-slate-400">{student.email}</div>
+                        </td>
+                        <td className="p-3">
+                          <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded font-extrabold">
+                            {student.recommendedStream || "BBA"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center font-bold text-slate-600">
+                          {student.correctCount !== undefined ? student.correctCount : "N/A"} / 15
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="font-extrabold text-emerald-700">{student.quizScore}</span>
+                          <span className="text-[10px] text-slate-400 ml-1">pts</span>
+                        </td>
+                        <td className="p-3 text-center">
+                          {status === "APPROVED" && (
+                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded text-[10px] font-extrabold">
+                              SCHOLARSHIP APPROVED
+                            </span>
+                          )}
+                          {status === "REJECTED" && (
+                            <span className="bg-rose-100 text-rose-800 border border-rose-200 px-2.5 py-0.5 rounded text-[10px] font-extrabold">
+                              REJECTED / INELIGIBLE
+                            </span>
+                          )}
+                          {status === "NONE" && (
+                            <span className="bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded text-[10px] font-bold">
+                              NO MERIT STATUS
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-1">
+                            <button
+                              onClick={() => approveScholarship(student.id, "APPROVED")}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-2 py-1 rounded cursor-pointer transition-all shrink-0"
+                            >
+                              Award Scholarship
+                            </button>
+                            <button
+                              onClick={() => approveScholarship(student.id, "REJECTED")}
+                              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] px-2 py-1 rounded cursor-pointer transition-all shrink-0"
+                            >
+                              Deny Scholarship
+                            </button>
+                            {status !== "NONE" && (
+                              <button
+                                onClick={() => approveScholarship(student.id, "NONE")}
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-[10px] px-2 py-1 rounded cursor-pointer transition-all shrink-0 font-bold"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {students.filter((s) => s.quizScore !== null).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">No applicants have completed the aptitude evaluation yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* REWARD MODAL */}
+          {rewardModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-100">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <h4 className="text-base font-bold text-slate-800">
+                    {editingReward ? "Modify Wheel Sector Slices" : "Add Wheel Sector segment"}
+                  </h4>
+                  <button onClick={() => setRewardModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={saveReward} className="space-y-4 text-xs font-medium">
+                  <div className="space-y-1">
+                    <label className="font-semibold text-slate-700">Sector Label / Reward Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Free Laptop, College Cap, 100% Waiver"
+                      value={rewName}
+                      onChange={(e) => setRewName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-semibold text-slate-700">Sector Segment Color (HEX)</label>
+                      <div className="flex space-x-1">
+                        <input
+                          type="color"
+                          value={rewColor}
+                          onChange={(e) => setRewColor(e.target.value)}
+                          className="w-8 h-8 rounded border border-slate-200 shrink-0 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          required
+                          placeholder="#3b82f6"
+                          value={rewColor}
+                          onChange={(e) => setRewColor(e.target.value)}
+                          className="w-full px-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] font-mono uppercase"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-semibold text-slate-700">Weighted Probability Score</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder="e.g. 5.0"
+                        value={rewProbability}
+                        onChange={(e) => setRewProbability(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 items-center">
+                    <div className="space-y-1">
+                      <label className="font-semibold text-slate-700">Maximum Winner Limit</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 100"
+                        value={rewQuantityLimit}
+                        onChange={(e) => setRewQuantityLimit(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2 pt-5">
+                      <input
+                        type="checkbox"
+                        id="isPremium"
+                        checked={rewIsPremium}
+                        onChange={(e) => setRewIsPremium(e.target.checked)}
+                        className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300 rounded cursor-pointer"
+                      />
+                      <label htmlFor="isPremium" className="font-bold text-slate-700 cursor-pointer">
+                        Requires Approval?
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setRewardModalOpen(false)}
+                      className="px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg cursor-pointer"
+                    >
+                      Save Sector segment
                     </button>
                   </div>
                 </form>

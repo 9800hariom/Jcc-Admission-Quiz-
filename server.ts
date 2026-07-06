@@ -206,23 +206,49 @@ function initDB() {
     }
   ];
 
+  const defaultRewards = [
+    { id: "rew-1", name: "Laptop", color: "#dc2626", probability: 0.1, isPremium: true, quantityLimit: 3, quantityWon: 0 },
+    { id: "rew-2", name: "Smartphone", color: "#d97706", probability: 0.3, isPremium: true, quantityLimit: 5, quantityWon: 0 },
+    { id: "rew-3", name: "Tablet", color: "#9333ea", probability: 0.5, isPremium: true, quantityLimit: 8, quantityWon: 0 },
+    { id: "rew-4", name: "100% Scholarship", color: "#059669", probability: 1, isPremium: true, quantityLimit: 10, quantityWon: 0 },
+    { id: "rew-5", name: "50% Scholarship", color: "#2563eb", probability: 5, isPremium: true, quantityLimit: 20, quantityWon: 0 },
+    { id: "rew-6", name: "College Merchandise", color: "#3b82f6", probability: 10, isPremium: false, quantityLimit: 100, quantityWon: 0 },
+    { id: "rew-7", name: "College T-Shirt", color: "#10b981", probability: 10, isPremium: false, quantityLimit: 50, quantityWon: 0 },
+    { id: "rew-8", name: "College Bag", color: "#f59e0b", probability: 8, isPremium: false, quantityLimit: 30, quantityWon: 0 },
+    { id: "rew-9", name: "Notebook Set", color: "#ef4444", probability: 15, isPremium: false, quantityLimit: 200, quantityWon: 0 },
+    { id: "rew-10", name: "Programming Book", color: "#8b5cf6", probability: 10, isPremium: false, quantityLimit: 80, quantityWon: 0 },
+    { id: "rew-11", name: "Agriculture Book", color: "#ec4899", probability: 10, isPremium: false, quantityLimit: 80, quantityWon: 0 },
+    { id: "rew-12", name: "USB Drive", color: "#06b6d4", probability: 5, isPremium: false, quantityLimit: 40, quantityWon: 0 },
+    { id: "rew-13", name: "Computer Accessories", color: "#14b8a6", probability: 5, isPremium: false, quantityLimit: 30, quantityWon: 0 },
+    { id: "rew-14", name: "Water Bottle", color: "#f97316", probability: 12, isPremium: false, quantityLimit: 100, quantityWon: 0 },
+    { id: "rew-15", name: "Free Career Counseling", color: "#6366f1", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+    { id: "rew-16", name: "Campus Tour Pass", color: "#a855f7", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+    { id: "rew-17", name: "Admission Priority", color: "#22c55e", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+    { id: "rew-18", name: "Registration Fee Discount", color: "#eab308", probability: 20, isPremium: false, quantityLimit: 200, quantityWon: 0 },
+    { id: "rew-19", name: "Scholarship Eligibility", color: "#3b82f6", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+    { id: "rew-20", name: "Better Luck Next Time", color: "#64748b", probability: 33.6, isPremium: false, quantityLimit: 10000, quantityWon: 0 }
+  ];
+
   if (!fs.existsSync(DB_FILE)) {
     const initialData = {
       questions: defaultQuestions,
       colleges: defaultColleges,
       students: [],
-      referrals: []
+      referrals: [],
+      rewards: defaultRewards,
+      spins: []
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
-    console.log("Database initialized and seeded.");
+    console.log("Database initialized and seeded with rewards.");
   } else {
-    // Read and merge any missing fields (like questions/colleges in case they were updated)
     try {
       const data = JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
       if (!data.questions || data.questions.length === 0) data.questions = defaultQuestions;
       if (!data.colleges || data.colleges.length === 0) data.colleges = defaultColleges;
       if (!data.students) data.students = [];
       if (!data.referrals) data.referrals = [];
+      if (!data.rewards || data.rewards.length === 0) data.rewards = defaultRewards;
+      if (!data.spins) data.spins = [];
       fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
     } catch (e) {
       console.error("Error reading database, resetting...", e);
@@ -230,7 +256,9 @@ function initDB() {
         questions: defaultQuestions,
         colleges: defaultColleges,
         students: [],
-        referrals: []
+        referrals: [],
+        rewards: defaultRewards,
+        spins: []
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
     }
@@ -245,7 +273,7 @@ function readData() {
     return JSON.parse(raw);
   } catch (err) {
     console.error("Failed to read database:", err);
-    return { questions: [], colleges: [], students: [], referrals: [] };
+    return { questions: [], colleges: [], students: [], referrals: [], rewards: [], spins: [] };
   }
 }
 
@@ -606,13 +634,20 @@ app.get("/api/admin/stats", requireAdmin, (req, res) => {
     .sort((a: any, b: any) => b.referralPoints - a.referralPoints)
     .slice(0, 5);
 
+  const totalSpins = db.spins ? db.spins.length : 0;
+  const totalPremiumWins = db.spins ? db.spins.filter((s: any) => s.isPremium).length : 0;
+  const pendingApprovalsCount = db.spins ? db.spins.filter((s: any) => s.approvedStatus === "PENDING").length : 0;
+
   res.json({
     totalUsers,
     quizCompletedCount,
     streamCounts,
     topScores,
     referralLeaderboard,
-    totalReferralsCount: db.referrals.length
+    totalReferralsCount: db.referrals.length,
+    totalSpins,
+    totalPremiumWins,
+    pendingApprovalsCount
   });
 });
 
@@ -658,6 +693,192 @@ app.get("/api/admin/export-csv", (req, res) => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=students_admission_data.csv");
   res.send(header + rows);
+});
+
+// ---------------------- SMART REWARD WHEEL API ----------------------
+
+// 1. Get All Active Rewards Slices
+app.get("/api/rewards", (req, res) => {
+  const db = readData();
+  res.json(db.rewards || []);
+});
+
+// 2. Admin Create/Edit/Delete Reward Wheel slices
+app.post("/api/rewards", requireAdmin, (req, res) => {
+  const { id, name, color, probability, isPremium, quantityLimit, deleteId } = req.body;
+  const db = readData();
+
+  if (!db.rewards) db.rewards = [];
+
+  if (deleteId) {
+    // Delete action
+    db.rewards = db.rewards.filter((r: any) => r.id !== deleteId);
+    writeData(db);
+    return res.json({ message: "Reward deleted successfully.", rewards: db.rewards });
+  }
+
+  if (id) {
+    // Edit action
+    const idx = db.rewards.findIndex((r: any) => r.id === id);
+    if (idx === -1) return res.status(404).json({ error: "Reward not found" });
+    db.rewards[idx] = {
+      ...db.rewards[idx],
+      name: name || db.rewards[idx].name,
+      color: color || db.rewards[idx].color,
+      probability: Number(probability) >= 0 ? Number(probability) : db.rewards[idx].probability,
+      isPremium: isPremium !== undefined ? !!isPremium : db.rewards[idx].isPremium,
+      quantityLimit: Number(quantityLimit) >= 0 ? Number(quantityLimit) : db.rewards[idx].quantityLimit
+    };
+    writeData(db);
+    return res.json({ message: "Reward updated successfully.", reward: db.rewards[idx], rewards: db.rewards });
+  } else {
+    // Create action
+    if (!name || !color || probability === undefined) {
+      return res.status(400).json({ error: "Name, color and probability are required." });
+    }
+    const newReward = {
+      id: "rew-" + Date.now(),
+      name,
+      color,
+      probability: Number(probability),
+      isPremium: !!isPremium,
+      quantityLimit: Number(quantityLimit) >= 0 ? Number(quantityLimit) : 100,
+      quantityWon: 0
+    };
+    db.rewards.push(newReward);
+    writeData(db);
+    return res.status(201).json({ message: "Reward created successfully.", reward: newReward, rewards: db.rewards });
+  }
+});
+
+// 3. Securely Spin the Wheel and Record Spun Reward
+app.post("/api/spin-wheel", (req, res) => {
+  const { studentId } = req.body;
+  if (!studentId) {
+    return res.status(400).json({ error: "Student ID is required to spin the wheel." });
+  }
+
+  const db = readData();
+  const student = db.students.find((s: any) => s.id === studentId);
+  if (!student) {
+    return res.status(404).json({ error: "Student profile not found." });
+  }
+
+  if (student.wonReward) {
+    return res.status(400).json({ error: "Student has already spun the wheel. Limit of 1 spin per user." });
+  }
+
+  // Filter rewards where won < limit
+  const activeRewards = (db.rewards || []).filter((r: any) => {
+    const limit = r.quantityLimit !== undefined ? Number(r.quantityLimit) : 10000;
+    const won = r.quantityWon !== undefined ? Number(r.quantityWon) : 0;
+    return won < limit;
+  });
+
+  if (activeRewards.length === 0) {
+    return res.status(500).json({ error: "No active rewards configured inside quantity limits. Contact Admin." });
+  }
+
+  // Choose reward using roulette-wheel selection algorithm
+  const totalWeight = activeRewards.reduce((sum: number, r: any) => sum + Number(r.probability), 0);
+  let winningReward = null;
+
+  if (totalWeight <= 0) {
+    winningReward = activeRewards[activeRewards.length - 1];
+  } else {
+    let rValue = Math.random() * totalWeight;
+    for (const r of activeRewards) {
+      rValue -= Number(r.probability);
+      if (rValue <= 0) {
+        winningReward = r;
+        break;
+      }
+    }
+    if (!winningReward) {
+      winningReward = activeRewards[activeRewards.length - 1];
+    }
+  }
+
+  // Increment winner's claim metric in Db
+  const rwIdx = db.rewards.findIndex((r: any) => r.id === winningReward.id);
+  if (rwIdx !== -1) {
+    db.rewards[rwIdx].quantityWon = (db.rewards[rwIdx].quantityWon || 0) + 1;
+  }
+
+  // Update student properties
+  student.wonReward = winningReward.name;
+  student.rewardClaimedAt = Date.now();
+  student.rewardApprovedStatus = winningReward.isPremium ? "PENDING" : "NONE";
+  student.otpVerified = true;
+  student.emailVerified = true;
+
+  // Add Spin History item
+  const newSpin = {
+    id: "spin-" + Date.now(),
+    studentId: student.id,
+    studentName: student.fullName,
+    studentEmail: student.email,
+    studentPhone: student.phone,
+    rewardName: winningReward.name,
+    isPremium: winningReward.isPremium,
+    timestamp: Date.now(),
+    approvedStatus: winningReward.isPremium ? "PENDING" : "NONE"
+  };
+
+  if (!db.spins) db.spins = [];
+  db.spins.push(newSpin);
+
+  writeData(db);
+  res.json({ message: "Spin registered successfully.", reward: winningReward, student });
+});
+
+// 4. Admin Get All Spins
+app.get("/api/admin/spins", requireAdmin, (req, res) => {
+  const db = readData();
+  res.json(db.spins || []);
+});
+
+// 5. Admin Approve/Reject Premium Reward Win
+app.post("/api/admin/approve-reward", requireAdmin, (req, res) => {
+  const { spinId, status } = req.body; // status: "APPROVED" or "REJECTED"
+  if (!spinId || !status) {
+    return res.status(400).json({ error: "Spin ID and status are required." });
+  }
+
+  const db = readData();
+  const spinIndex = (db.spins || []).findIndex((s: any) => s.id === spinId);
+  if (spinIndex === -1) {
+    return res.status(404).json({ error: "Spin log not found." });
+  }
+
+  db.spins[spinIndex].approvedStatus = status;
+
+  // Update corresponding student profile
+  const student = db.students.find((s: any) => s.id === db.spins[spinIndex].studentId);
+  if (student) {
+    student.rewardApprovedStatus = status;
+  }
+
+  writeData(db);
+  res.json({ message: `Reward spin marked as ${status} successfully.`, spin: db.spins[spinIndex] });
+});
+
+// 6. Admin Approve/Reject Merit Scholarship Application Status
+app.post("/api/admin/approve-scholarship", requireAdmin, (req, res) => {
+  const { studentId, status } = req.body; // status: "APPROVED", "REJECTED", "NONE"
+  if (!studentId || !status) {
+    return res.status(400).json({ error: "Student ID and status are required." });
+  }
+
+  const db = readData();
+  const student = db.students.find((s: any) => s.id === studentId);
+  if (!student) {
+    return res.status(404).json({ error: "Student not found." });
+  }
+
+  student.scholarshipApprovedStatus = status;
+  writeData(db);
+  res.json({ message: `Student scholarship application status updated to ${status}.`, student });
 });
 
 // 10. Optional Gemini API Smart Career Recommendation Letter

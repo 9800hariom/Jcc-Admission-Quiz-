@@ -39,6 +39,14 @@ export interface Student {
   referredBy: string | null;
   recommendedStream?: string;
   recommendationReason?: string;
+  
+  // Verification, Wheel & Scholarship state fields
+  otpVerified?: boolean;
+  emailVerified?: boolean;
+  wonReward?: string;
+  rewardClaimedAt?: number;
+  rewardApprovedStatus?: "PENDING" | "APPROVED" | "REJECTED" | "NONE";
+  scholarshipApprovedStatus?: "PENDING" | "APPROVED" | "REJECTED" | "NONE";
 }
 
 export interface ReferralHistory {
@@ -51,6 +59,28 @@ export interface ReferralHistory {
   timestamp: number;
 }
 
+export interface RewardWheelItem {
+  id: string;
+  name: string;
+  color: string;
+  probability: number; // probability weight e.g., 10% -> 10, or 0.1% -> 0.1
+  isPremium: boolean;
+  quantityLimit: number;
+  quantityWon: number;
+}
+
+export interface SpinHistoryItem {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhone: string;
+  rewardName: string;
+  isPremium: boolean;
+  timestamp: number;
+  approvedStatus: "PENDING" | "APPROVED" | "REJECTED" | "NONE";
+}
+
 export interface AdminStats {
   totalUsers: number;
   quizCompletedCount: number;
@@ -58,4 +88,10 @@ export interface AdminStats {
   topScores: Student[];
   referralLeaderboard: Student[];
   totalReferralsCount: number;
+  
+  // New wheel statistics
+  totalSpins: number;
+  totalPremiumWins: number;
+  pendingApprovalsCount: number;
 }
+

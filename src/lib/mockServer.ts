@@ -194,11 +194,36 @@ const DEFAULT_COLLEGES: College[] = [
   }
 ];
 
+const DEFAULT_REWARDS = [
+  { id: "rew-1", name: "Laptop", color: "#dc2626", probability: 0.1, isPremium: true, quantityLimit: 3, quantityWon: 0 },
+  { id: "rew-2", name: "Smartphone", color: "#d97706", probability: 0.3, isPremium: true, quantityLimit: 5, quantityWon: 0 },
+  { id: "rew-3", name: "Tablet", color: "#9333ea", probability: 0.5, isPremium: true, quantityLimit: 8, quantityWon: 0 },
+  { id: "rew-4", name: "100% Scholarship", color: "#059669", probability: 1, isPremium: true, quantityLimit: 10, quantityWon: 0 },
+  { id: "rew-5", name: "50% Scholarship", color: "#2563eb", probability: 5, isPremium: true, quantityLimit: 20, quantityWon: 0 },
+  { id: "rew-6", name: "College Merchandise", color: "#3b82f6", probability: 10, isPremium: false, quantityLimit: 100, quantityWon: 0 },
+  { id: "rew-7", name: "College T-Shirt", color: "#10b981", probability: 10, isPremium: false, quantityLimit: 50, quantityWon: 0 },
+  { id: "rew-8", name: "College Bag", color: "#f59e0b", probability: 8, isPremium: false, quantityLimit: 30, quantityWon: 0 },
+  { id: "rew-9", name: "Notebook Set", color: "#ef4444", probability: 15, isPremium: false, quantityLimit: 200, quantityWon: 0 },
+  { id: "rew-10", name: "Programming Book", color: "#8b5cf6", probability: 10, isPremium: false, quantityLimit: 80, quantityWon: 0 },
+  { id: "rew-11", name: "Agriculture Book", color: "#ec4899", probability: 10, isPremium: false, quantityLimit: 80, quantityWon: 0 },
+  { id: "rew-12", name: "USB Drive", color: "#06b6d4", probability: 5, isPremium: false, quantityLimit: 40, quantityWon: 0 },
+  { id: "rew-13", name: "Computer Accessories", color: "#14b8a6", probability: 5, isPremium: false, quantityLimit: 30, quantityWon: 0 },
+  { id: "rew-14", name: "Water Bottle", color: "#f97316", probability: 12, isPremium: false, quantityLimit: 100, quantityWon: 0 },
+  { id: "rew-15", name: "Free Career Counseling", color: "#6366f1", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+  { id: "rew-16", name: "Campus Tour Pass", color: "#a855f7", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+  { id: "rew-17", name: "Admission Priority", color: "#22c55e", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+  { id: "rew-18", name: "Registration Fee Discount", color: "#eab308", probability: 20, isPremium: false, quantityLimit: 200, quantityWon: 0 },
+  { id: "rew-19", name: "Scholarship Eligibility", color: "#3b82f6", probability: 15, isPremium: false, quantityLimit: 1000, quantityWon: 0 },
+  { id: "rew-20", name: "Better Luck Next Time", color: "#64748b", probability: 33.6, isPremium: false, quantityLimit: 10000, quantityWon: 0 }
+];
+
 interface MockDBData {
   questions: Question[];
   colleges: College[];
   students: Student[];
   referrals: ReferralHistory[];
+  rewards?: any[];
+  spins?: any[];
 }
 
 function getDB(): MockDBData {
@@ -208,7 +233,9 @@ function getDB(): MockDBData {
       questions: DEFAULT_QUESTIONS,
       colleges: DEFAULT_COLLEGES,
       students: [],
-      referrals: []
+      referrals: [],
+      rewards: DEFAULT_REWARDS,
+      spins: []
     };
     localStorage.setItem(DB_KEY, JSON.stringify(defaultData));
     return defaultData;
@@ -219,13 +246,17 @@ function getDB(): MockDBData {
     if (!parsed.colleges || parsed.colleges.length === 0) parsed.colleges = DEFAULT_COLLEGES;
     if (!parsed.students) parsed.students = [];
     if (!parsed.referrals) parsed.referrals = [];
+    if (!parsed.rewards || parsed.rewards.length === 0) parsed.rewards = DEFAULT_REWARDS;
+    if (!parsed.spins) parsed.spins = [];
     return parsed;
   } catch (e) {
     const defaultData: MockDBData = {
       questions: DEFAULT_QUESTIONS,
       colleges: DEFAULT_COLLEGES,
       students: [],
-      referrals: []
+      referrals: [],
+      rewards: DEFAULT_REWARDS,
+      spins: []
     };
     localStorage.setItem(DB_KEY, JSON.stringify(defaultData));
     return defaultData;
@@ -308,13 +339,20 @@ export function handleMockRequest(urlStr: string, init?: RequestInit): Response 
       .sort((a: any, b: any) => b.referralPoints - a.referralPoints)
       .slice(0, 5);
 
+    const totalSpins = db.spins ? db.spins.length : 0;
+    const totalPremiumWins = db.spins ? db.spins.filter((s: any) => s.isPremium).length : 0;
+    const pendingApprovalsCount = db.spins ? db.spins.filter((s: any) => s.approvedStatus === "PENDING").length : 0;
+
     return makeResponse({
       totalUsers,
       quizCompletedCount,
       streamCounts,
       topScores,
       referralLeaderboard,
-      totalReferralsCount: db.referrals.length
+      totalReferralsCount: db.referrals.length,
+      totalSpins,
+      totalPremiumWins,
+      pendingApprovalsCount
     });
   }
 
@@ -640,6 +678,172 @@ Congratulations on completing your stream evaluation! Based on your educational 
 Wishing you great success on your academic journey!
 `
     });
+  }
+
+  // 10. GET /api/rewards
+  if (path === "/api/rewards" && method === "GET") {
+    return makeResponse(db.rewards || []);
+  }
+
+  // 11. POST /api/rewards (Admin)
+  if (path === "/api/rewards" && method === "POST") {
+    if (!isAdminAuthorized()) return makeError("Unauthorized access", 401);
+    const { id, name, color, probability, isPremium, quantityLimit, deleteId } = body || {};
+
+    if (!db.rewards) db.rewards = [];
+
+    if (deleteId) {
+      db.rewards = db.rewards.filter((r: any) => r.id !== deleteId);
+      saveDB(db);
+      return makeResponse({ message: "Reward deleted successfully.", rewards: db.rewards });
+    }
+
+    if (id) {
+      const idx = db.rewards.findIndex((r: any) => r.id === id);
+      if (idx === -1) return makeError("Reward not found", 404);
+      db.rewards[idx] = {
+        ...db.rewards[idx],
+        name: name || db.rewards[idx].name,
+        color: color || db.rewards[idx].color,
+        probability: Number(probability) >= 0 ? Number(probability) : db.rewards[idx].probability,
+        isPremium: isPremium !== undefined ? !!isPremium : db.rewards[idx].isPremium,
+        quantityLimit: Number(quantityLimit) >= 0 ? Number(quantityLimit) : db.rewards[idx].quantityLimit
+      };
+      saveDB(db);
+      return makeResponse({ message: "Reward updated successfully.", rewards: db.rewards });
+    } else {
+      if (!name || !color || probability === undefined) {
+        return makeError("Name, color, and probability are required.", 400);
+      }
+      const newReward = {
+        id: "rew-" + Date.now(),
+        name,
+        color,
+        probability: Number(probability),
+        isPremium: !!isPremium,
+        quantityLimit: Number(quantityLimit) >= 0 ? Number(quantityLimit) : 100,
+        quantityWon: 0
+      };
+      db.rewards.push(newReward);
+      saveDB(db);
+      return makeResponse({ message: "Reward created successfully.", reward: newReward, rewards: db.rewards }, 201);
+    }
+  }
+
+  // 12. POST /api/spin-wheel (Student)
+  if (path === "/api/spin-wheel" && method === "POST") {
+    const { studentId } = body || {};
+    if (!studentId) return makeError("Student ID is required.", 400);
+
+    const sIdx = db.students.findIndex((s: any) => s.id === studentId);
+    if (sIdx === -1) return makeError("Student profile not found.", 404);
+    const student = db.students[sIdx];
+
+    if (student.wonReward) {
+      return makeError("Student already spun the wheel.", 400);
+    }
+
+    const activeRewards = (db.rewards || []).filter((r: any) => {
+      const limit = r.quantityLimit !== undefined ? Number(r.quantityLimit) : 10000;
+      const won = r.quantityWon !== undefined ? Number(r.quantityWon) : 0;
+      return won < limit;
+    });
+
+    if (activeRewards.length === 0) {
+      return makeError("No rewards configured inside quantity limits.", 500);
+    }
+
+    const totalWeight = activeRewards.reduce((sum: number, r: any) => sum + Number(r.probability), 0);
+    let winningReward = null;
+
+    if (totalWeight <= 0) {
+      winningReward = activeRewards[activeRewards.length - 1];
+    } else {
+      let rValue = Math.random() * totalWeight;
+      for (const r of activeRewards) {
+        rValue -= Number(r.probability);
+        if (rValue <= 0) {
+          winningReward = r;
+          break;
+        }
+      }
+      if (!winningReward) {
+        winningReward = activeRewards[activeRewards.length - 1];
+      }
+    }
+
+    // Increment won counter
+    const rwIdx = db.rewards.findIndex((r: any) => r.id === winningReward.id);
+    if (rwIdx !== -1) {
+      db.rewards[rwIdx].quantityWon = (db.rewards[rwIdx].quantityWon || 0) + 1;
+    }
+
+    student.wonReward = winningReward.name;
+    student.rewardClaimedAt = Date.now();
+    student.rewardApprovedStatus = winningReward.isPremium ? "PENDING" : "NONE";
+    student.otpVerified = true;
+    student.emailVerified = true;
+
+    db.students[sIdx] = student;
+
+    const newSpin = {
+      id: "spin-" + Date.now(),
+      studentId: student.id,
+      studentName: student.fullName,
+      studentEmail: student.email,
+      studentPhone: student.phone,
+      rewardName: winningReward.name,
+      isPremium: winningReward.isPremium,
+      timestamp: Date.now(),
+      approvedStatus: winningReward.isPremium ? "PENDING" : "NONE"
+    };
+
+    if (!db.spins) db.spins = [];
+    db.spins.push(newSpin);
+
+    saveDB(db);
+    return makeResponse({ message: "Spin registered successfully.", reward: winningReward, student });
+  }
+
+  // 13. GET /api/admin/spins
+  if (path === "/api/admin/spins" && method === "GET") {
+    if (!isAdminAuthorized()) return makeError("Unauthorized access", 401);
+    return makeResponse(db.spins || []);
+  }
+
+  // 14. POST /api/admin/approve-reward
+  if (path === "/api/admin/approve-reward" && method === "POST") {
+    if (!isAdminAuthorized()) return makeError("Unauthorized access", 401);
+    const { spinId, status } = body || {};
+    if (!spinId || !status) return makeError("Spin ID and status are required.", 400);
+
+    if (!db.spins) db.spins = [];
+    const spinIndex = db.spins.findIndex((s: any) => s.id === spinId);
+    if (spinIndex === -1) return makeError("Spin record not found.", 404);
+
+    db.spins[spinIndex].approvedStatus = status;
+
+    const sIdx = db.students.findIndex((s: any) => s.id === db.spins[spinIndex].studentId);
+    if (sIdx !== -1) {
+      db.students[sIdx].rewardApprovedStatus = status;
+    }
+
+    saveDB(db);
+    return makeResponse({ message: "Reward status updated.", spin: db.spins[spinIndex] });
+  }
+
+  // 15. POST /api/admin/approve-scholarship
+  if (path === "/api/admin/approve-scholarship" && method === "POST") {
+    if (!isAdminAuthorized()) return makeError("Unauthorized access", 401);
+    const { studentId, status } = body || {};
+    if (!studentId || !status) return makeError("Student ID and status are required.", 400);
+
+    const sIdx = db.students.findIndex((s: any) => s.id === studentId);
+    if (sIdx === -1) return makeError("Student not found.", 404);
+
+    db.students[sIdx].scholarshipApprovedStatus = status;
+    saveDB(db);
+    return makeResponse({ message: "Scholarship status updated.", student: db.students[sIdx] });
   }
 
   // Default fallback for unhandled /api
